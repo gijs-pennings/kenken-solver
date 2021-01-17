@@ -14,7 +14,39 @@ typedef std::chrono::milliseconds ms;
 struct cage {
     int op; // 0 = add, 1 = sub, 2 = mul, 3 = div
     int target;
-    std::vector<int> cells; // i = x + y * size  where  (0,0) is upper left
+
+    int current; // initially identity of operator
+    int numEmpty;
+
+    bool valid(int n) {
+        switch (op) {
+            case 0:
+                n += current; break;
+            case 1:
+                n = abs(n - current); break;
+            case 2:
+                n *= current; break;
+            case 3:
+                int max = n, min = current;
+                if (max < min) std::swap(max, min);
+                if (max % min != 0) return false;
+                n = max / min;
+        }
+
+        if (numEmpty == 1) {
+            if (n != target) return false; // since all cells are filled
+        } else if (op == 0) {
+            if (n >= target) return false;
+        } else if (op == 2) {
+            if (n > target) return false; // missing number could be 1!
+        }
+
+        // only update fields if new cell value is valid
+        current = n;
+        numEmpty--;
+
+        return true;
+    }
 };
 
 int size;
@@ -33,46 +65,17 @@ cage* cageOf[9*9];
 int colCandidates[9][10];
 int rowCandidates[9][10];
 
-bool valid(int i, int n) {
-    cage* c = cageOf[i];
-    bool full = true;
-    for (int j : c->cells)
-        if (j > i) {
-            full = false; // j comes after i, so still empty
-        } else if (j < i) {
-            switch (c->op) {
-                case 0:
-                    n += grid[j];
-                    break;
-                case 1:
-                    n = abs(grid[j] - n);
-                    break;
-                case 2:
-                    n *= grid[j];
-                    break;
-                case 3:
-                    int max = n, min = grid[j];
-                    if (max < min) std::swap(max, min);
-                    if (max % min != 0) return false;
-                    n = max / min;
-            }
-        }
-
-    if (full) return n == c->target;
-    if (c->op == 0) return n < c->target;
-    if (c->op == 2) return n <= c->target; // missing number could be 1
-
-    return true; // otherwise
-}
-
 bool backtrack(int i) {
     if (i == size*size) return true;
+
+    cage *c = cageOf[i];
+    int previous = c->current;
 
     int y = i / size;
     int* cc = colCandidates[i - size * y];
     int* rc = rowCandidates[y];
 
-    for (int n = 0, m = 0, nPrev = 0, mPrev = 0; true; ) {
+    for (int n = 0, m = 0, nPrev = 0, mPrev = 0; true; /* void */) {
         // 1. find next candidate
         do {
             if (n <= m) {
@@ -84,15 +87,15 @@ bool backtrack(int i) {
             }
         } while (n != m);
 
-        // 2. recur (if cage is valid)
-        if (valid(i, n)) {
-            grid[i] = n;
+        // 2. check cage validity & recur if OK
+        if (c->valid(n)) {
             cc[nPrev] += cc[n];
             rc[mPrev] += rc[m];
 
-            if (backtrack(i+1)) return true;
+            if (backtrack(i+1)) { grid[i] = n; return true; }
 
-         // grid[i] = 0;
+            c->current = previous;
+            c->numEmpty++;
             cc[nPrev] -= cc[n];
             rc[mPrev] -= rc[m];
         }
@@ -109,31 +112,27 @@ int main(int argc, char** argv) {
 
     // 2. process other lines, containing cages
     while (std::getline(input, line)) {
-        cage* c = new cage;
+        cage* c = new cage(); // zero initialization
 
         switch (line[0]) {
-            case '+': c->op = 0; break;
             case '-': c->op = 1; break;
-            case '*': c->op = 2; break;
-            case '/': c->op = 3;
+            case '*': c->op = 2; c->current = 1; break;
+            case '/': c->op = 3; c->current = 1;
         }
 
         int i = 0;
-        c->target = 0;
         while (line[++i] != ' ') {
             c->target *= 10;
             c->target += line[i] - '0';
         }
 
         for (i++; i < line.size(); i += 3) {
-            int k = (line[i] - 'a') + (line[i+1] - '1') * size; // like chess
-            c->cells.push_back(k);
-            cageOf[k] = c;
+            c->numEmpty++;
+            cageOf[(line[i] - 'a') + (line[i+1] - '1') * size] = c;
         }
     }
 
     // 3. initialize remaining data structures
-    std::memset(grid, 0, sizeof(int) * size * size);
     for (int i = 0; i < size; i++)
         for (int j = 0; j <= size; j++)
             colCandidates[i][j] = rowCandidates[i][j] = 1;
