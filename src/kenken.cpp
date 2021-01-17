@@ -21,18 +21,19 @@ int size;
 int grid[9*9];
 cage* cageOf[9*9];
 
+// The following arrays contain lists of candidates for every row and column.
+// For row y and value n, the next valid candidate is n + rowCandidates[y][n],
+// if less than or equal to size. To remove a candidate, add rowCandidates[y][n]
+// to rowCandidates[y][nPrev], where nPrev is the previous value from the
+// iteration, i.e. n == nPrev + rowCandidates[y][nPrev]. To re-insert a value,
+// subtract rowCandidates[y][n] from rowCandidates[y][nPrev], reversing the
+// change. This allows O(n) iteration and O(1) insertion/deletion, similar to a
+// linked list. However, this solution (hopefully) performs better due to its
+// simplicity and locality of reference.
+int colCandidates[9][10];
+int rowCandidates[9][10];
+
 bool valid(int i, int n) {
-    // 1. check column
-    for (int j = i % size; j < i; j += size)
-        if (grid[j] == n)
-            return false;
-
-    // 2. check row
-    for (int j = i / size * size; j < i; j++)
-        if (grid[j] == n)
-            return false;
-
-    // 3. check cage (note: we reuse n -- bad style, but whatever)
     cage* c = cageOf[i];
     bool full = true;
     for (int j : c->cells)
@@ -66,13 +67,36 @@ bool valid(int i, int n) {
 
 bool backtrack(int i) {
     if (i == size*size) return true;
-    for (int n = 1; n <= size; n++)
+
+    int y = i / size;
+    int* cc = colCandidates[i - size * y];
+    int* rc = rowCandidates[y];
+
+    for (int n = 0, m = 0, nPrev = 0, mPrev = 0; true; ) {
+        // 1. find next candidate
+        do {
+            if (n <= m) {
+                nPrev = n, n += cc[n];
+                if (n > size) return false;
+            } else {
+                mPrev = m, m += rc[m];
+                if (m > size) return false;
+            }
+        } while (n != m);
+
+        // 2. recur (if cage is valid)
         if (valid(i, n)) {
             grid[i] = n;
+            cc[nPrev] += cc[n];
+            rc[mPrev] += rc[m];
+
             if (backtrack(i+1)) return true;
-            // grid[i] = 0;
+
+         // grid[i] = 0;
+            cc[nPrev] -= cc[n];
+            rc[mPrev] -= rc[m];
         }
-    return false;
+    }
 }
 
 int main(int argc, char** argv) {
@@ -82,8 +106,6 @@ int main(int argc, char** argv) {
     // 1. process first line, containing size
     std::getline(input, line);
     size = line[0] - '0';
-
-    std::memset(grid, 0, sizeof(int) * size * size);
 
     // 2. process other lines, containing cages
     while (std::getline(input, line)) {
@@ -110,7 +132,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    // 3. run & profit!
+    // 3. initialize remaining data structures
+    std::memset(grid, 0, sizeof(int) * size * size);
+    for (int i = 0; i < size; i++)
+        for (int j = 0; j <= size; j++)
+            colCandidates[i][j] = rowCandidates[i][j] = 1;
+
+    // 4. run & profit!
     auto time_start = hr_clock::now();
     bool success = backtrack(0);
     auto time_end = hr_clock::now();
