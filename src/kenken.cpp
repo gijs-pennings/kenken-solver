@@ -1,10 +1,8 @@
 #include <chrono>
-#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <utility>
-#include <vector>
 
 #define abs(x) ((x)<0?-(x):(x))
 
@@ -69,13 +67,13 @@ bool backtrack(int i) {
     if (i == size*size) return true;
 
     cage *c = cageOf[i];
-    int previous = c->current;
+    int original = c->current;
 
     int y = i / size;
     int* cc = colCandidates[i - size * y];
     int* rc = rowCandidates[y];
 
-    for (int n = 0, m = 0, nPrev = 0, mPrev = 0; true; /* void */) {
+    for (int n = 0, m = 0, nPrev, mPrev; true; /* void */) {
         // 1. find next candidate
         do {
             if (n <= m) {
@@ -94,7 +92,7 @@ bool backtrack(int i) {
 
             if (backtrack(i+1)) { grid[i] = n; return true; }
 
-            c->current = previous;
+            c->current = original;
             c->numEmpty++;
             cc[nPrev] -= cc[n];
             rc[mPrev] -= rc[m];
