@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 
+#include <candidates.h>
+
 #define abs(x) ((x)<0?-(x):(x))
 
 typedef std::chrono::high_resolution_clock hr_clock;
@@ -12,6 +14,7 @@ typedef std::chrono::milliseconds ms;
 struct cage {
     int op; // 0 = add, 1 = sub, 2 = mul, 3 = div
     int target;
+    int candidates; // bitset
 
     int current; // initially identity of operator
     int numEmpty;
@@ -51,17 +54,8 @@ int size;
 int grid[9*9];
 cage* cageOf[9*9];
 
-// The following arrays contain lists of candidates for every row and column.
-// For row y and value n, the next valid candidate is n + rowCandidates[y][n],
-// if less than or equal to size. To remove a candidate, add rowCandidates[y][n]
-// to rowCandidates[y][nPrev], where nPrev is the previous value from the
-// iteration, i.e. n == nPrev + rowCandidates[y][nPrev]. To re-insert a value,
-// subtract rowCandidates[y][n] from rowCandidates[y][nPrev], reversing the
-// change. This allows O(n) iteration and O(1) insertion/deletion, similar to a
-// linked list. However, this solution (hopefully) performs better due to its
-// simplicity and locality of reference.
-int colCandidates[9][10];
-int rowCandidates[9][10];
+int colCandidates[9];
+int rowCandidates[9];
 
 bool backtrack(int i) {
     if (i == size*size) return true;
@@ -70,34 +64,29 @@ bool backtrack(int i) {
     int original = c->current;
 
     int y = i / size;
-    int* cc = colCandidates[i - size * y];
-    int* rc = rowCandidates[y];
+    int x = i - size*y;
 
-    for (int n = 0, m = 0, nPrev, mPrev; true; /* void */) {
-        // 1. find next candidate
-        do {
-            if (n <= m) {
-                nPrev = n, n += cc[n];
-                if (n > size) return false;
-            } else {
-                mPrev = m, m += rc[m];
-                if (m > size) return false;
-            }
-        } while (n != m);
+    for (int mask, set = colCandidates[x] & rowCandidates[y] & c->candidates;
+            set != 0; set ^= mask) {
+        // 1. determine next candidate
+        int n = __builtin_ctz(set);
+        mask = 1 << n;
 
         // 2. check cage validity & recur if OK
         if (c->valid(n)) {
-            cc[nPrev] += cc[n];
-            rc[mPrev] += rc[m];
+            colCandidates[x] ^= mask;
+            rowCandidates[y] ^= mask;
 
             if (backtrack(i+1)) { grid[i] = n; return true; }
 
             c->current = original;
             c->numEmpty++;
-            cc[nPrev] -= cc[n];
-            rc[mPrev] -= rc[m];
+            colCandidates[x] ^= mask;
+            rowCandidates[y] ^= mask;
         }
     }
+
+    return false;
 }
 
 int main(int argc, char** argv) {
@@ -107,16 +96,11 @@ int main(int argc, char** argv) {
     // 1. process first line, containing size
     std::getline(input, line);
     size = line[0] - '0';
+    int mask = (1 << size+1) - 2; // e.g. for size 3 we get 0b1110
 
     // 2. process other lines, containing cages
     while (std::getline(input, line)) {
         cage* c = new cage(); // zero initialization
-
-        switch (line[0]) {
-            case '-': c->op = 1; break;
-            case '*': c->op = 2; c->current = 1; break;
-            case '/': c->op = 3; c->current = 1;
-        }
 
         int i = 0;
         while (line[++i] != ' ') {
@@ -128,12 +112,34 @@ int main(int argc, char** argv) {
             c->numEmpty++;
             cageOf[(line[i] - 'a') + (line[i+1] - '1') * size] = c;
         }
+
+        switch (line[0]) {
+            case '+':
+             // c->op = 0;
+                c->candidates = c->numEmpty > candidates::MAX_CAGE
+                        ? mask : candidates::add[c->numEmpty][c->target] & mask;
+             // c->current = 0;
+                break;
+            case '-':
+                c->op = 1;
+                c->candidates = candidates::sub[c->target] & mask;
+             // c->current = 0;
+                break;
+            case '*':
+                c->op = 2;
+                c->candidates = c->numEmpty > candidates::MAX_CAGE
+                        ? mask : candidates::mul[c->numEmpty][c->target] & mask;
+                c->current = 1;
+                break;
+            case '/':
+                c->op = 3;
+                c->candidates = candidates::div[c->target] & mask;
+                c->current = 1;
+        }
     }
 
     // 3. initialize remaining data structures
-    for (int i = 0; i < size; i++)
-        for (int j = 0; j <= size; j++)
-            colCandidates[i][j] = rowCandidates[i][j] = 1;
+    for (int i = 0; i < size; i++) colCandidates[i] = rowCandidates[i] = mask;
 
     // 4. run & profit!
     auto time_start = hr_clock::now();
@@ -149,7 +155,7 @@ int main(int argc, char** argv) {
     if (success)
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++)
-                std::cout << grid[x + y * size] << ' ';
+                std::cout << grid[x + y*size] << ' ';
             std::cout << '\n';
         }
 }
