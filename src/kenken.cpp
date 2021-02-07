@@ -1,12 +1,11 @@
 #include <chrono>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <utility>
 
 #include <candidates.h>
-
-#define abs(x) ((x)<0?-(x):(x))
 
 typedef std::chrono::high_resolution_clock hr_clock;
 typedef std::chrono::microseconds ms;
@@ -24,7 +23,7 @@ struct cage {
             case 0:
                 n += current; break;
             case 1:
-                n = abs(n - current); break;
+                n = std::abs(n - current); break;
             case 2:
                 n *= current; break;
             case 3:
@@ -60,27 +59,27 @@ int rowCandidates[9];
 bool backtrack(int i) {
     if (i == size*size) return true;
 
-    cage *c = cageOf[i];
-    int original = c->current;
+    cage& c = *cageOf[i];
+    const int original = c.current;
 
-    int y = i / size;
-    int x = i - size*y;
+    const int y = i / size;
+    const int x = i - size*y;
 
-    for (int mask, set = colCandidates[x] & rowCandidates[y] & c->candidates;
+    for (int mask, set = colCandidates[x] & rowCandidates[y] & c.candidates;
             set != 0; set ^= mask) {
         // 1. determine next candidate
-        int n = __builtin_ctz(set);
+        const int n = __builtin_ctz(set);
         mask = 1 << n;
 
         // 2. check cage validity & recur if OK
-        if (c->valid(n)) {
+        if (c.valid(n)) {
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
 
             if (backtrack(i+1)) { grid[i] = n; return true; }
 
-            c->current = original;
-            c->numEmpty++;
+            c.current = original;
+            c.numEmpty++;
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
         }
@@ -96,7 +95,7 @@ int main(int argc, char** argv) {
     // 1. process first line, containing size
     std::getline(input, line);
     size = line[0] - '0';
-    int mask = (1 << size+1) - 2; // e.g. for size 3 we get 0b1110
+    const int mask = (1 << size+1) - 2; // e.g. for size 3 we get 0b1110
 
     // 2. process other lines, containing cages
     while (std::getline(input, line)) {
@@ -139,18 +138,18 @@ int main(int argc, char** argv) {
     }
 
     // 3. initialize remaining data structures
+    const auto timeStart = hr_clock::now();
     for (int i = 0; i < size; i++) colCandidates[i] = rowCandidates[i] = mask;
 
     // 4. run & profit!
-    auto time_start = hr_clock::now();
-    bool success = backtrack(0);
-    auto time_end = hr_clock::now();
+    const bool success = backtrack(0);
+    const auto timeEnd = hr_clock::now();
 
     std::cout
-            << (success ? "success!" : "(no solution)")
-            << "  in "
-            << std::chrono::duration_cast<ms>(time_end - time_start).count()
-            << " μs\n";
+            << (success ? "success!" : "no solution")
+            << " (backtracking: "
+            << std::chrono::duration_cast<ms>(timeEnd - timeStart).count()
+            << " μs)\n";
 
     if (success)
         for (int y = 0; y < size; y++) {
