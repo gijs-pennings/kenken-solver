@@ -9,7 +9,7 @@
 #define abs(x) ((x)<0?-(x):(x))
 
 typedef std::chrono::high_resolution_clock hr_clock;
-typedef std::chrono::milliseconds ms;
+typedef std::chrono::microseconds ms;
 
 struct cage {
     int op; // 0 = add, 1 = sub, 2 = mul, 3 = div
@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
             << (success ? "success!" : "(no solution)")
             << "  in "
             << std::chrono::duration_cast<ms>(time_end - time_start).count()
-            << " ms\n";
+            << " μs\n";
 
     if (success)
         for (int y = 0; y < size; y++) {
