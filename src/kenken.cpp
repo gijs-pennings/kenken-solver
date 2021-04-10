@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include <candidates.h>
+#include "candidates.h"
 
 typedef std::chrono::high_resolution_clock hr_clock;
 typedef std::chrono::microseconds ms;
@@ -18,7 +18,7 @@ struct cage {
     int current; // initially identity of operator
     int numEmpty;
 
-    bool valid(int n) {
+    bool is_valid(int n) {
         switch (op) {
             case 0:
                 n += current; break;
@@ -72,7 +72,7 @@ bool backtrack(int i) {
         mask = 1 << n;
 
         // 2. check cage validity & recur if OK
-        if (c.valid(n)) {
+        if (c.is_valid(n)) {
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
 
