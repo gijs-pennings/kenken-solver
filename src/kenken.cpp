@@ -33,19 +33,14 @@ struct cage {
                 n = max / min;
         }
 
-        if (numEmpty == 1) {
-            if (n != target) return false; // since all cells are filled
-        } else if (op == 0) {
-            if (n >= target) return false;
-        } else if (op == 2) {
-            if (n > target) return false; // missing number could be 1!
-        }
+        const bool valid = numEmpty == 1
+                ? n == target
+                : !(op == 0 ? n >= target : op == 2 && n > target);
 
         // only update fields if new cell value is valid
-        current = n;
-        numEmpty--;
+        if (valid) current = n, numEmpty--;
 
-        return true;
+        return valid;
     }
 };
 
