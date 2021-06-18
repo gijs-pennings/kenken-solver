@@ -35,9 +35,10 @@ struct cage {
 
         const bool valid = numEmpty == 1
                 ? n == target
-                : !(op == 0 ? n >= target : op == 2 && n > target);
+                : (op == 0 ? n < target : op != 2 || n <= target);
 
         // only update fields if new cell value is valid
+        // alternatively:  return n & -valid  and set fields in backtrack
         if (valid) current = n, numEmpty--;
 
         return valid;
@@ -97,10 +98,7 @@ int main(int argc, char** argv) {
         cage* c = new cage(); // zero initialization
 
         int i = 0;
-        while (line[++i] != ' ') {
-            c->target *= 10;
-            c->target += line[i] - '0';
-        }
+        while (line[++i] != ' ') c->target = 10 * c->target + line[i] - '0';
 
         for (i++; i < line.size(); i += 3) {
             c->numEmpty++;
