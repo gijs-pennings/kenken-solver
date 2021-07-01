@@ -33,15 +33,12 @@ struct cage {
                 n = max / min;
         }
 
-        const bool valid = numEmpty == 1
-                ? n == target
-                : (op == 0 ? n < target : op != 2 || n <= target);
+        if (numEmpty == 1 ? n != target : op == 0 && n >= target || op == 2 && n > target) return false;
 
         // only update fields if new cell value is valid
         // alternatively:  return n & -valid  and set fields in backtrack
-        if (valid) current = n, numEmpty--;
-
-        return valid;
+        current = n, numEmpty--;
+        return true;
     }
 };
 
@@ -131,17 +128,17 @@ int main(int argc, char** argv) {
     }
 
     // 3. initialize remaining data structures
-    const auto timeStart = hr_clock::now();
     for (int i = 0; i < size; i++) colCandidates[i] = rowCandidates[i] = mask;
 
     // 4. run & profit!
+    const auto time0 = hr_clock::now();
     const bool success = backtrack(0);
-    const auto timeEnd = hr_clock::now();
+    const auto time1 = hr_clock::now();
 
     std::cout
             << (success ? "success!" : "no solution")
             << " (backtracking: "
-            << std::chrono::duration_cast<ms>(timeEnd - timeStart).count()
+            << std::chrono::duration_cast<ms>(time1 - time0).count()
             << " μs)\n";
 
     if (success)
