@@ -75,7 +75,7 @@ bool backtrack(int i) {
             c.numEmpty++;
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
-        }
+        } // else if (c.numEmpty > 1 && c.op & 1 == 0) return false;
     }
 
     return false;
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     const bool success = backtrack(0);
     const auto time1 = hr_clock::now();
 
-    std::cout
+    std::cerr
             << (success ? "success!" : "no solution")
             << " (backtracking: "
             << std::chrono::duration_cast<ms>(time1 - time0).count()
