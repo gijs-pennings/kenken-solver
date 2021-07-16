@@ -75,7 +75,7 @@ bool backtrack(int i) {
             c.numEmpty++;
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
-        } // else if (c.numEmpty > 1 && c.op & 1 == 0) return false;
+        } // else if (c.numEmpty > 1 && (c.op & 1) == 0) return false;
     }
 
     return false;
