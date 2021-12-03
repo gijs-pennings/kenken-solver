@@ -21,11 +21,14 @@ struct cage {
     bool is_valid(int n) {
         switch (op) {
             case 0:
-                n += current; break;
+                n += current;
+                break;
             case 1:
-                n = std::abs(n - current); break;
+                n = std::abs(n - current);
+                break;
             case 2:
-                n *= current; break;
+                n *= current;
+                break;
             case 3:
                 int max = n, min = current;
                 if (max < min) std::swap(max, min);
@@ -36,7 +39,7 @@ struct cage {
         if (numEmpty == 1 ? n != target : op == 0 && n >= target || op == 2 && n > target) return false;
 
         // only update fields if new cell value is valid
-        // alternatively:  return n & -valid  and set fields in backtrack
+        // alternatively: `return n & -valid` and set fields in `solve`
         current = n, numEmpty--;
         return true;
     }
@@ -49,7 +52,7 @@ cage* cageOf[9*9];
 int colCandidates[9];
 int rowCandidates[9];
 
-bool backtrack(int i) {
+bool solve(int i) {
     if (i == size*size) return true;
 
     cage& c = *cageOf[i];
@@ -69,7 +72,7 @@ bool backtrack(int i) {
             colCandidates[x] ^= mask;
             rowCandidates[y] ^= mask;
 
-            if (backtrack(i+1)) { grid[i] = n; return true; }
+            if (solve(i+1)) { grid[i] = n; return true; }
 
             c.current = original;
             c.numEmpty++;
@@ -132,11 +135,11 @@ int main(int argc, char** argv) {
 
     // 4. run & profit!
     const auto time0 = hr_clock::now();
-    const bool success = backtrack(0);
+    const bool success = solve(0);
     const auto time1 = hr_clock::now();
 
     std::cerr
-            << (success ? "success!" : "no solution")
+            << (success ? "solved!" : "no solution")
             << " (backtracking: "
             << std::chrono::duration_cast<ms>(time1 - time0).count()
             << " μs)\n";
